@@ -2,6 +2,7 @@ import numpy as np
 from scipy import stats
 from scipy.integrate import quad, simpson
 from sklearn.neighbors import KernelDensity
+from joblib import Parallel, delayed
 
 # define some constatns
 # mbh-sigma constants
@@ -124,3 +125,40 @@ def div_KL(p,q):
     d = p*(np.log10(p/q))
     div = np.sum(d[np.isfinite(d)])
     return div
+
+def paf_analytic_allrates(p_a0,a0_samp,mbh,t,af_grid=None,
+                        Naf=200,Na0=10000,uniform=False,rates=np.logspace(-1,1,50)):
+    """given a sample of a0 and precalculated p_a0 function, return a dictionary of predicted p_af for different rates"""
+    if af_grid is None:
+        af_grid = np.linspace(0, np.max(a0_samp) + 3, Naf)
+    
+    # grid for a0
+    a0_grid = np.linspace(np.min(af_grid), np.max(af_grid), Na0)
+    # meshgrid for a0, af
+    AF, A0 = np.meshgrid(af_grid, a0_grid, indexing='ij')
+
+    # grid for p_a0
+    if uniform:
+        amax = np.ceil(np.max(a0_samp))
+        amin = np.floor(np.min(a0_samp))
+        p_a0_vals = np.array([1/(amax-amin)]*len(a0_grid))
+        p_a0_vals = np.where((a0_grid<amax) & (a0_grid>amin), 1/(amax-amin), 0)
+    else:
+        p_a0_vals = p_a0(a0_grid)
+    # reshape to mesh grid
+    p_a0_grid = p_a0_vals[np.newaxis,:]
+
+    def optimize_inner(R):
+        """function to parallelize p_af caculation for different rates"""
+        # grid of integrand
+        integrand_matrix = pa_sigma(AF, mbh, t, A0, R) * p_a0_grid
+        # cut to integration limit: a0 >= af    
+        integrand_matrix = np.where(A0 >= AF, integrand_matrix, 0)
+        # integrate
+        p_af = simpson(integrand_matrix, a0_grid, axis=1)
+        return p_af
+    
+    # calculate p_af and save as dict[rate]:p_af
+    res = Parallel(n_jobs=-1)(delayed(optimize_inner)(r) for r in rates)
+    p_af_preds = {r:p for r,p in zip(rates,res)}
+    return p_af_preds
