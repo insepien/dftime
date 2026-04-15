@@ -7,6 +7,17 @@ from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 from .pa import *
 
+def mycmap():
+    # custom colormap
+    start_color = 'mistyrose'
+    mid_color = 'cornflowerblue'
+    end_color = 'darkseagreen'
+    cmap = LinearSegmentedColormap.from_list(
+        name='custom_diverging',
+        colors=[start_color,mid_color,end_color],
+    )
+    return cmap
+
 #### some pa construction checks
 def plot_pa_unif(amin,amax,mbh,t,R,ax,clr):
     """assuming a0~U, given a0 range, integrate analyticaly to find p(af) and plot
@@ -25,14 +36,7 @@ def plot_pa_unif(amin,amax,mbh,t,R,ax,clr):
 def plot_everything(dat,dat_dkl, dat_cut,ap,obs_sampsize,
                         rates=np.logspace(-1,1,50),tR=1):
     norm = mcolors.LogNorm(vmin=rates.min(), vmax=rates.max())
-    # custom colormap
-    start_color = 'palevioletred'
-    mid_color = 'honeydew'
-    end_color = 'seagreen'
-    cmap = LinearSegmentedColormap.from_list(
-        name='custom_diverging',
-        colors=[start_color, mid_color, end_color],
-    )
+    cmap = mycmap()
     fig,ax = plt.subplots(3,len(obs_sampsize),figsize=(int(3*len(obs_sampsize)),9),)
 
     for obsN, i in zip(obs_sampsize, range(len(obs_sampsize))):
