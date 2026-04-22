@@ -5,11 +5,12 @@ from matplotlib import cm
 from scipy.interpolate import LinearNDInterpolator
 from astropy.cosmology import WMAP9 as cosmo
 import astropy.units as u
+import os
 
 def read_stemo21_selfunc():
     """read in stemo,et al+2021 selection function"""
     # read plot image
-    im = mpimg.imread("../data/c.png")
+    im = mpimg.imread("/home/insepien/dftime/data/c.png")
     im = np.flip(im,axis=0)
     # get the RGB color arrays, im[:,:,3] is transparency
     rgb_image = im[:,:,:3]
@@ -54,15 +55,19 @@ def get_interp_selfunc():
     # interpolate
     pflat = PIX.ravel()
     qflat = Q.ravel()
-    interp = LinearNDInterpolator(list(zip(qflat,pflat)),csamp.ravel())
-    return interp,ipix,iq
+    interp = LinearNDInterpolator(list(zip(qflat/iq,pflat/ipix)),csamp.ravel())
+    return interp
 
-def psel(sep_kpc,z,q,plate_scale=0.05):
-    """return p(obs|sep in kpc, mass ratio q)"""
-    # get interpolator and conversion factor from index to plot values
-    interp,ipix,iq = get_interp_selfunc()
+def kpc_to_pix(sep_kpc,plate_scale=0.05,z=0.2):
     # convert physical sep to pix sep
     fwhm = plate_scale*2.5 *u.arcsec #arcsec/pix, WFC3/UVIS
     sep_theta = ((sep_kpc*u.kpc/cosmo.angular_diameter_distance(z)).to("")*u.rad).to(u.arcsec)
     sep_pix = sep_theta/fwhm
-    return interp(q*iq,sep_pix*ipix)
+    return sep_pix
+
+def psel(sep_kpc,z,q,plate_scale=0.05):
+    """return p(obs|sep in kpc, mass ratio q)"""
+    # get interpolator and conversion factor from index to plot values
+    interp = get_interp_selfunc()
+    sep_pix = kpc_to_pix(sep_kpc,plate_scale,z)
+    return interp(q,sep_pix)
