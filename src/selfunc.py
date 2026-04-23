@@ -7,10 +7,14 @@ from astropy.cosmology import WMAP9 as cosmo
 import astropy.units as u
 import os
 
+_CACHED_INTERP = None
+
 def read_stemo21_selfunc():
     """read in stemo,et al+2021 selection function"""
     # read plot image
-    im = mpimg.imread("/home/insepien/dftime/data/c.png")
+    module_dir = os.path.dirname(os.path.abspath(__file__)) 
+    image_path = os.path.join(module_dir, "..", "data", "c.png")
+    im = mpimg.imread(image_path)
     im = np.flip(im,axis=0)
     # get the RGB color arrays, im[:,:,3] is transparency
     rgb_image = im[:,:,:3]
@@ -46,17 +50,19 @@ def sample_stemo_selfunc(final_data):
 def get_interp_selfunc():
     """main function to read stemo plot, sample, and interpolate"""
     # read stemo data
-    _,final_data = read_stemo21_selfunc()
-    # sample that plot
-    PIX,Q,csamp,nq,npix = sample_stemo_selfunc(final_data)
-    # conversion from indices to paper ticks
-    ipix = npix/200
-    iq = nq/100
-    # interpolate
-    pflat = PIX.ravel()
-    qflat = Q.ravel()
-    interp = LinearNDInterpolator(list(zip(qflat/iq,pflat/ipix)),csamp.ravel())
-    return interp
+    global _CACHED_INTERP
+    if _CACHED_INTERP is None:
+        _,final_data = read_stemo21_selfunc()
+        # sample that plot
+        PIX,Q,csamp,nq,npix = sample_stemo_selfunc(final_data)
+        # conversion from indices to paper ticks
+        ipix = npix/200
+        iq = nq/100
+        # interpolate
+        pflat = PIX.ravel()
+        qflat = Q.ravel()
+        _CACHED_INTERP = LinearNDInterpolator(list(zip(qflat/iq,pflat/ipix)),csamp.ravel())
+    return _CACHED_INTERP
 
 def kpc_to_pix(sep_kpc,plate_scale=0.05,z=0.2):
     # convert physical sep to pix sep
