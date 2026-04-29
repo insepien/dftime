@@ -17,11 +17,10 @@
 
 
 # 1. Load your environment
-
 module purge
 eval "$(conda shell.bash hook)"
 conda activate agn
-cd /home/insepien/dftime
+cd /home1/hamydo/dftime
 
 # 2. Set the Python Path so it finds your 'src' folder
 export PYTHONPATH=$PYTHONPATH:$(pwd)
@@ -31,9 +30,9 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 # --n_parallel_events: number of threads for single-event draws
 
 figaro-par-hierarchical \
-    -i data/events \
+    -i /scratch1/hamydo/dftime_data/events \
     -b "[[0,40],[0,100]]" \
     --se_draws 100 \
     --draws 200 \
-    --selfunc selfunc_aq.py \
+    --selfunc script/selfunc_aq.py \
     --n_parallel 16

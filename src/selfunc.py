@@ -37,15 +37,24 @@ def read_stemo21_selfunc():
 def sample_stemo_selfunc(final_data):
     """sample stemo plot to avoid grid lines"""
     nq,npix = final_data.shape
-    # mesh with sampling indices
+    # conversion from indices to paper ticks
+    ipix = npix/200
+    iq = nq/100
+    # array with image coords
+    pvals = np.linspace(0,200,npix)
+    qvals = np.linspace(0,100,nq)
+    # index array to sample and avoid grid lines
     pcoords = np.arange(0,npix,25)[1:]-1
     qcoords = np.arange(0,nq,20)[1:]-3
+    # add the boundaries to avoid nan interp
     pcoords,qcoords = [np.insert(arr,0,0) for arr in [pcoords,qcoords]]
     pcoords,qcoords = [np.insert(arr,len(arr),n-1) for arr,n in zip([pcoords,qcoords],[npix,nq])]
-    PIX,Q = np.meshgrid(pcoords,qcoords)
+    # sampling mesh
+    PIX,Q = np.meshgrid(pvals[pcoords],qvals[qcoords])
+    PIND,QIND = np.meshgrid(pcoords,qcoords)
     # sample data
-    csamp = np.array([final_data[y,x] for x,y in zip(PIX,Q)])
-    return PIX+1,Q+1,csamp,nq,npix
+    csamp = np.array([final_data[y,x] for x,y in zip(PIND,QIND)])
+    return PIX,Q,csamp,nq,npix,iq,ipix
 
 def get_interp_selfunc():
     """main function to read stemo plot, sample, and interpolate"""
@@ -54,14 +63,11 @@ def get_interp_selfunc():
     if _CACHED_INTERP is None:
         _,final_data = read_stemo21_selfunc()
         # sample that plot
-        PIX,Q,csamp,nq,npix = sample_stemo_selfunc(final_data)
-        # conversion from indices to paper ticks
-        ipix = npix/200
-        iq = nq/100
+        PIX,Q,csamp,_,_,_,_ = sample_stemo_selfunc(final_data)
         # interpolate
         pflat = PIX.ravel()
         qflat = Q.ravel()
-        _CACHED_INTERP = LinearNDInterpolator(list(zip(qflat/iq,pflat/ipix)),csamp.ravel())
+        _CACHED_INTERP = LinearNDInterpolator(list(zip(qflat,pflat)),csamp.ravel())
     return _CACHED_INTERP
 
 def kpc_to_pix(sep_kpc,plate_scale=0.05,z=0.2):
